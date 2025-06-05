@@ -29,10 +29,20 @@ export class NotionService {
       const response = await this.client.databases.query({
         database_id: this.databaseId,
         filter: {
-          property: "title",
-          title: {
-            equals: dateStr,
-          },
+          and: [
+            {
+              property: "topic",
+              select: {
+                equals: "Daily Note",
+              },
+            },
+            {
+              property: "created",
+              date: {
+                equals: dateStr,
+              },
+            },
+          ],
         },
       });
 
