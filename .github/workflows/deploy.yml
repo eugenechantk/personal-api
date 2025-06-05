@@ -14,6 +14,6 @@ jobs:
       - name: Install Railway CLI
         run: curl -sL https://railway.app/install.sh | sh
       - name: Deploy
-        run: railway up --service notion-automation-api
+        run: railway up --service notion-automation-api --ci
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
