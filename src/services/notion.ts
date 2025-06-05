@@ -36,25 +36,31 @@ export class NotionService {
         filter: {
           and: [
             {
-              property: "topic",
+              property: "Type",
               select: {
                 equals: "Daily Note",
               },
             },
             {
-              property: "created",
-              date: {
+              timestamp: "created_time",
+              created_time: {
                 on_or_after: startOfDay,
               },
             },
             {
-              property: "created",
-              date: {
+              timestamp: "created_time",
+              created_time: {
                 on_or_before: endOfDay,
               },
             },
           ],
         },
+        sorts: [
+          {
+            timestamp: "created_time",
+            direction: "descending",
+          },
+        ],
       });
 
       if (response.results.length === 0) {

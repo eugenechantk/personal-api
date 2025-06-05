@@ -44,10 +44,15 @@ describe("NotionService", () => {
           title: [
             {
               text: {
-                content: "Test Page",
+                content: "Test Daily Note",
               },
             },
           ],
+        },
+        Type: {
+          select: {
+            name: "Daily Note",
+          },
         },
       },
     });
@@ -71,12 +76,16 @@ const code = "block";
 console.log(code);
 \`\`\``;
 
+    // Find today's page and use it for appending
+    const foundPageId = await notionService.findTodayPage();
+    expect(foundPageId).toBe(testPageId);
+
     // Append content to the page
-    await notionService.appendToPage(testPageId, testContent);
+    await notionService.appendToPage(foundPageId!, testContent);
 
     // Verify the content was added correctly
     const blocks = await client.blocks.children.list({
-      block_id: testPageId,
+      block_id: foundPageId!,
     });
 
     const results = blocks.results as BlockObjectResponse[];
