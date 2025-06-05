@@ -14,7 +14,7 @@ import type {
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { config } from "dotenv";
 import { resolve } from "path";
-import { NotionService } from "../src/services/notion";
+import { NotionService } from "../notion";
 
 // Load environment variables from .env file
 config({ path: resolve(process.cwd(), ".env") });
