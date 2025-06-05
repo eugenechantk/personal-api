@@ -20,7 +20,9 @@ jobs:
       - name: Verify deployment status
         run: |
           for i in {1..30}; do
-            status=$(railway status --service notion-automation-api --json | jq -r '..|.status? // empty' | head -n1)
+            status=$(railway status --json \
+              | jq -r --arg svc "notion-automation-api" 'recurse(.?) | select(.name?==$svc) | ..|.status? // empty' \
+              | head -n1)
             echo "Current status: $status"
             case "$status" in
               SUCCESS|ACTIVE|READY)
