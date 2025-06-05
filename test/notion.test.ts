@@ -227,12 +227,12 @@ console.log(code);
 
   afterAll(async () => {
     // // Clean up: Delete the test page
-    // if (testPageId) {
-    //   const client = new Client({ auth: NOTION_API_KEY! });
-    //   await client.pages.update({
-    //     page_id: testPageId,
-    //     archived: true,
-    //   });
-    // }
+    if (testPageId) {
+      const client = new Client({ auth: NOTION_API_KEY! });
+      await client.pages.update({
+        page_id: testPageId,
+        archived: true,
+      });
+    }
   });
 });
