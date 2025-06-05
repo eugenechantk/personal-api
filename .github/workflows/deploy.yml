@@ -17,3 +17,20 @@ jobs:
         run: railway up --service notion-automation-api --ci
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      - name: Verify deployment status
+        run: |
+          for i in {1..30}; do
+            status=$(railway status --service notion-automation-api --json | jq -r '..|.status? // empty' | head -n1)
+            echo "Current status: $status"
+            case "$status" in
+              SUCCESS|ACTIVE|READY)
+                echo "Service deployed successfully"
+                exit 0
+                ;;
+            esac
+            sleep 5
+          done
+          echo "Deployment did not complete in time"
+          exit 1
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
