@@ -17,14 +17,19 @@ Bun.serve({
   routes: {
     "/health": Response.json({ status: "ok" }),
     "/notion/append-daily-note": async (request) => {
+      console.log("Received request to append daily note");
+
       if (request.method !== "POST") {
+        console.log("Invalid method:", request.method);
         return new Response("Method not allowed", { status: 405 });
       }
 
       try {
+        console.log("Parsing request body");
         const { content } = await request.json();
 
         if (!content || typeof content !== "string") {
+          console.log("Invalid content:", { content });
           return new Response("Invalid request body", { status: 400 });
         }
 
@@ -38,7 +43,22 @@ Bun.serve({
         return new Response("Note appended successfully", { status: 200 });
       } catch (error) {
         console.error("Error handling request:", error);
-        return new Response("Internal server error", { status: 500 });
+        if (error instanceof Error) {
+          console.error("Error details:", {
+            message: error.message,
+            stack: error.stack,
+          });
+        }
+        return new Response(
+          JSON.stringify({
+            error: "Internal server error",
+            message: error instanceof Error ? error.message : "Unknown error",
+          }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
       }
     },
   },
