@@ -26,6 +26,11 @@ export class NotionService {
   private async findPageByDate(dateStr: string): Promise<string | null> {
     console.log("Searching for page with date:", dateStr);
     try {
+      // Convert dateStr to dayjs object in Hong Kong timezone
+      const date = dayjs.tz(dateStr, "DD/MM/YYYY", "Asia/Hong_Kong");
+      const startOfDay = date.startOf("day").toISOString();
+      const endOfDay = date.endOf("day").toISOString();
+
       const response = await this.client.databases.query({
         database_id: this.databaseId,
         filter: {
@@ -39,7 +44,13 @@ export class NotionService {
             {
               property: "created",
               date: {
-                equals: dateStr,
+                on_or_after: startOfDay,
+              },
+            },
+            {
+              property: "created",
+              date: {
+                on_or_before: endOfDay,
               },
             },
           ],
