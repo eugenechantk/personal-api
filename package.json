@@ -2,6 +2,10 @@
   "name": "notion-automation-api",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "dev": "bun run --watch /src/index.ts",
+    "start": "bun run /src/index.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
