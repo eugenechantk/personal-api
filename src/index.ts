@@ -1,8 +1,10 @@
+import { AIService } from "./services/ai";
 import { NotionService } from "./services/notion";
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID;
+const GOOGLE_GENERATIVE_AI_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
 if (!NOTION_API_KEY || !NOTION_DATABASE_ID) {
   throw new Error(
@@ -10,7 +12,14 @@ if (!NOTION_API_KEY || !NOTION_DATABASE_ID) {
   );
 }
 
+if (!GOOGLE_GENERATIVE_AI_API_KEY) {
+  throw new Error(
+    "Missing required environment variable: GOOGLE_GENERATIVE_AI_API_KEY"
+  );
+}
+
 const notionService = new NotionService(NOTION_API_KEY, NOTION_DATABASE_ID);
+const aiService = new AIService(GOOGLE_GENERATIVE_AI_API_KEY);
 
 Bun.serve({
   port,
@@ -51,6 +60,38 @@ Bun.serve({
             stack: error.stack,
           });
         }
+        return new Response(
+          JSON.stringify({
+            error: "Internal server error",
+            message: error instanceof Error ? error.message : "Unknown error",
+          }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+    },
+    "/ai/assistant": async (request) => {
+      if (request.method !== "POST") {
+        return new Response("Method not allowed", { status: 405 });
+      }
+
+      try {
+        const { prompt, image } = await request.json();
+
+        if (!prompt || typeof prompt !== "string") {
+          return new Response("Invalid prompt", { status: 400 });
+        }
+
+        if (image && typeof image !== "string") {
+          return new Response("Invalid image format", { status: 400 });
+        }
+
+        const result = await aiService.generateResponse({ prompt, image });
+        return Response.json(result);
+      } catch (error) {
+        console.error("Error handling AI request:", error);
         return new Response(
           JSON.stringify({
             error: "Internal server error",
