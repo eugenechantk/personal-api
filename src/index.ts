@@ -16,7 +16,7 @@ Bun.serve({
   port,
   routes: {
     "/health": Response.json({ status: "ok" }),
-    "/append-note": async (request) => {
+    "/notion/append-daily-note": async (request) => {
       if (request.method !== "POST") {
         return new Response("Method not allowed", { status: 405 });
       }
