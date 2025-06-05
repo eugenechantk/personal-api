@@ -34,12 +34,14 @@ Bun.serve({
         }
 
         const pageId = await notionService.findTodayPage();
+        console.log("Found today's page!");
 
         if (!pageId) {
           return new Response("Today's page not found", { status: 404 });
         }
 
         await notionService.appendToPage(pageId, content);
+        console.log("Note appended successfully");
         return new Response("Note appended successfully", { status: 200 });
       } catch (error) {
         console.error("Error handling request:", error);
