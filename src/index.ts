@@ -77,14 +77,18 @@ Bun.serve({
         return new Response("Method not allowed", { status: 405 });
       }
 
+      console.log("Received request to generate AI response");
+
       try {
         const { prompt, image } = await request.json();
 
         if (!prompt || typeof prompt !== "string") {
+          console.error("Received invalid prompt. Abort");
           return new Response("Invalid prompt", { status: 400 });
         }
 
         if (image && typeof image !== "string") {
+          console.error("Received invalid image. Abort");
           return new Response("Invalid image format", { status: 400 });
         }
 

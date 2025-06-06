@@ -27,6 +27,8 @@ export class AIService {
   }> {
     const { prompt, image } = params;
 
+    console.log(`Sending to AI: ${prompt}${image ? " (with image)" : ""}`);
+
     if (!prompt) {
       throw new Error("Prompt is required");
     }
@@ -51,7 +53,7 @@ export class AIService {
     });
     const { text, sources } = result;
 
-    console.log(result);
+    // console.log(result);
 
     return { text, sources };
   }
