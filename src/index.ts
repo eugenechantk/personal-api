@@ -92,7 +92,10 @@ Bun.serve({
           return new Response("Invalid image format", { status: 400 });
         }
 
+        console.log(`Sending to AI: ${prompt}${image ? " (with image)" : ""}`);
         const result = await aiService.generateResponse({ prompt, image });
+
+        console.log(`Response from AI: ${JSON.stringify(result, null, 2)}`);
         return Response.json(result);
       } catch (error) {
         console.error("Error handling AI request:", error);
