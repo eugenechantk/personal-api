@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import type { ResponseCreateParamsBase } from "openai/resources/responses/responses.mjs";
 import { AIService } from "./services/ai";
 import { NotionService } from "./services/notion";
 
@@ -118,25 +119,22 @@ Bun.serve({
         );
       }
     },
-    "/ai/openai/chat/completions": async (request: Request) => {
+    "/ai/openai/responses/create": async (request: Request) => {
       if (request.method !== "POST") {
         return new Response("Method not allowed", { status: 405 });
       }
 
       console.log("Received request to OpenAI chat completions");
 
+      const DEFAULT_BODY: ResponseCreateParamsBase = {
+        model: "gpt-4.1-mini",
+        tools: [{ type: "web_search_preview" }],
+      };
+
       try {
         const body = await request.json();
 
-        // Validate required fields
-        if (!body.model || typeof body.model !== "string") {
-          console.error("Missing or invalid model parameter");
-          return new Response("Missing or invalid model parameter", {
-            status: 400,
-          });
-        }
-
-        if (!body.messages || !Array.isArray(body.messages)) {
+        if (!body.input || !Array.isArray(body.input)) {
           console.error("Missing or invalid messages parameter");
           return new Response("Missing or invalid messages parameter", {
             status: 400,
@@ -144,21 +142,25 @@ Bun.serve({
         }
 
         console.log(
-          `Sending to OpenAI: model=${body.model}, messages=${
-            body.messages.length
+          `Sending to OpenAI: model=${body.model}, inputs=${
+            body.input.length
           }, stream=${body.stream || false}`
         );
 
-        const result = await openai.chat.completions.create(body);
-
         // Handle streaming response
         if (body.stream) {
-          const stream = new ReadableStream({
+          const stream = await openai.responses.create({
+            ...DEFAULT_BODY,
+            ...body,
+            stream: true,
+          });
+
+          const readableStream = new ReadableStream({
             async start(controller) {
               try {
                 // Type guard to ensure result is a stream
-                if (Symbol.asyncIterator in result) {
-                  for await (const chunk of result as any) {
+                if (Symbol.asyncIterator in stream) {
+                  for await (const chunk of stream as any) {
                     const chunkText = JSON.stringify(chunk) + "\n";
                     controller.enqueue(new TextEncoder().encode(chunkText));
                   }
@@ -170,7 +172,7 @@ Bun.serve({
             },
           });
 
-          return new Response(stream, {
+          return new Response(readableStream, {
             headers: {
               "Content-Type": "text/plain; charset=utf-8",
               "Transfer-Encoding": "chunked",
@@ -179,6 +181,10 @@ Bun.serve({
         }
 
         // Handle non-streaming response
+        const result = await openai.responses.create({
+          ...DEFAULT_BODY,
+          ...body,
+        });
         console.log(`Response from OpenAI: ${JSON.stringify(result, null, 2)}`);
         return Response.json(result);
       } catch (error) {

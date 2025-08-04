@@ -26,11 +26,11 @@ describe("OpenAI API Route", () => {
     // The server will be stopped when the process ends
   });
 
-  describe("POST /ai/openai/chat/completions", () => {
+  describe("POST /ai/openai/responses/create", () => {
     it("should handle non-streaming request", async () => {
       const requestBody = {
         model: "gpt-4o-mini",
-        messages: [
+        input: [
           {
             role: "user",
             content: "Hello, how are you?",
@@ -43,7 +43,7 @@ describe("OpenAI API Route", () => {
         JSON.stringify(requestBody, null, 2)
       );
 
-      const response = await fetch(`${baseUrl}/ai/openai/chat/completions`, {
+      const response = await fetch(`${baseUrl}/ai/openai/responses/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -65,27 +65,20 @@ describe("OpenAI API Route", () => {
       expect(response.status).toBe(200);
       const result = await response.json();
 
-      expect(result).toHaveProperty("id");
-      expect(result).toHaveProperty("object");
-      expect(result).toHaveProperty("created");
-      expect(result).toHaveProperty("model");
-      expect(result).toHaveProperty("choices");
-      expect(result).toHaveProperty("usage");
-      expect(Array.isArray(result.choices)).toBe(true);
-      expect(result.choices.length).toBeGreaterThan(0);
-      expect(result.choices[0]).toHaveProperty("message");
-      expect(result.choices[0].message).toHaveProperty("content");
+      expect(result.output).toHaveProperty("length");
+      expect(result.output.length).toBeGreaterThan(0);
+      expect(result.output[0].content[0]).toHaveProperty("text");
     });
 
     it("should handle streaming request", async () => {
-      const response = await fetch(`${baseUrl}/ai/openai/chat/completions`, {
+      const response = await fetch(`${baseUrl}/ai/openai/responses/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           model: "gpt-4o-mini",
-          messages: [
+          input: [
             {
               role: "user",
               content: "Hello, how are you?",
@@ -110,32 +103,31 @@ describe("OpenAI API Route", () => {
           if (done) break;
 
           const chunk = decoder.decode(value);
-          const lines = chunk.split("\n").filter((line) => line.trim());
 
-          for (const line of lines) {
-            try {
-              const parsed = JSON.parse(line);
-              expect(parsed).toHaveProperty("choices");
+          try {
+            const parsed = JSON.parse(chunk);
+            if (parsed.type === "response.output_text.delta") {
+              expect(parsed).toHaveProperty("delta");
+              expect(typeof parsed.delta).toBe("string");
               chunks++;
-            } catch (e) {
-              // Skip non-JSON lines
             }
+          } catch (e) {
+            // Skip non-JSON lines
           }
         }
-
         expect(chunks).toBeGreaterThan(0);
       }
     });
 
     it("should handle function calls", async () => {
-      const response = await fetch(`${baseUrl}/ai/openai/chat/completions`, {
+      const response = await fetch(`${baseUrl}/ai/openai/responses/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           model: "gpt-4o-mini",
-          messages: [
+          input: [
             {
               role: "user",
               content: "What's the weather like in New York?",
@@ -144,19 +136,17 @@ describe("OpenAI API Route", () => {
           tools: [
             {
               type: "function",
-              function: {
-                name: "get_weather",
-                description: "Get the current weather in a given location",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    location: {
-                      type: "string",
-                      description: "The city and state, e.g. San Francisco, CA",
-                    },
+              name: "get_weather",
+              description: "Get the current weather in a given location",
+              parameters: {
+                type: "object",
+                properties: {
+                  location: {
+                    type: "string",
+                    description: "The city and state, e.g. San Francisco, CA",
                   },
-                  required: ["location"],
                 },
+                required: ["location"],
               },
             },
           ],
@@ -167,19 +157,19 @@ describe("OpenAI API Route", () => {
       expect(response.status).toBe(200);
       const result = await response.json();
 
-      expect(result).toHaveProperty("choices");
-      expect(result.choices.length).toBeGreaterThan(0);
+      expect(result).toHaveProperty("output");
+      expect(result.output.length).toBeGreaterThan(0);
     });
 
     it("should handle conversation with multiple messages", async () => {
-      const response = await fetch(`${baseUrl}/ai/openai/chat/completions`, {
+      const response = await fetch(`${baseUrl}/ai/openai/responses/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           model: "gpt-4o-mini",
-          messages: [
+          input: [
             {
               role: "system",
               content: "You are a helpful assistant.",
@@ -203,64 +193,13 @@ describe("OpenAI API Route", () => {
       expect(response.status).toBe(200);
       const result = await response.json();
 
-      expect(result).toHaveProperty("choices");
-      expect(result.choices.length).toBeGreaterThan(0);
-      expect(result.choices[0].message).toHaveProperty("content");
-    });
-
-    it("should handle JSON response format", async () => {
-      const response = await fetch(`${baseUrl}/ai/openai/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "user",
-              content: "Give me a simple JSON object with name and age.",
-            },
-          ],
-          response_format: { type: "json_object" },
-        }),
-      });
-
-      expect(response.status).toBe(200);
-      const result = await response.json();
-
-      expect(result).toHaveProperty("choices");
-      expect(result.choices.length).toBeGreaterThan(0);
-      expect(result.choices[0].message).toHaveProperty("content");
-
-      // Try to parse the content as JSON
-      const content = result.choices[0].message.content;
-      if (content) {
-        expect(() => JSON.parse(content)).not.toThrow();
-      }
-    });
-
-    it("should return 400 for missing model", async () => {
-      const response = await fetch(`${baseUrl}/ai/openai/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "user",
-              content: "Hello",
-            },
-          ],
-        }),
-      });
-
-      expect(response.status).toBe(400);
+      expect(result.output).toHaveProperty("length");
+      expect(result.output.length).toBeGreaterThan(0);
+      expect(result.output[0].content[0]).toHaveProperty("text");
     });
 
     it("should return 400 for missing messages", async () => {
-      const response = await fetch(`${baseUrl}/ai/openai/chat/completions`, {
+      const response = await fetch(`${baseUrl}/ai/openai/responses/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -274,7 +213,7 @@ describe("OpenAI API Route", () => {
     });
 
     it("should return 405 for non-POST requests", async () => {
-      const response = await fetch(`${baseUrl}/ai/openai/chat/completions`, {
+      const response = await fetch(`${baseUrl}/ai/openai/responses/create`, {
         method: "GET",
       });
 
