@@ -10,7 +10,7 @@ export class AIService {
   private model: any;
 
   constructor(apiKey: string) {
-    this.model = google("gemini-2.5-flash-preview-04-17", {
+    this.model = google("gemini-2.5-flash", {
       useSearchGrounding: true,
       dynamicRetrievalConfig: {
         mode: "MODE_UNSPECIFIED",
